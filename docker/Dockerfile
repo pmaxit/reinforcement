@@ -1,0 +1,103 @@
+# Use python3.7
+# See https://docs.docker.com/samples/library/python/ for latest 
+
+FROM yangyangfu/modelicagym_py3
+LABEL maintainer yangyangfu(yangyang.fu@tamu.edu)
+
+
+
+## add cuda
+USER root
+
+ENV TZ=US/Central
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN ldconfig
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gnupg2 curl ca-certificates && \
+    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
+    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
+    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list && \
+    apt-get purge --autoremove -y curl \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CUDA_VERSION 10.1.243
+ENV CUDA_PKG_VERSION 10-1=$CUDA_VERSION-1
+
+# For libraries in the cuda-compat-* package: https://docs.nvidia.com/cuda/eula/index.html#attachment-a
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cuda-cudart-$CUDA_PKG_VERSION \
+    cuda-compat-10-1 \
+    && ln -s cuda-10.1 /usr/local/cuda && \
+    rm -rf /var/lib/apt/lists/*
+
+# Required for nvidia-docker v1
+RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf && \
+    echo "/usr/local/nvidia/lib64" >> /etc/ld.so.conf.d/nvidia.conf
+
+ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
+
+# nvidia-container-runtime
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+ENV NVIDIA_REQUIRE_CUDA "cuda>=10.1 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411 brand=tesla,driver>=418,driver<419"
+
+# CUDNN
+ENV CUDNN_VERSION 8.0.4.30
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcudnn8=$CUDNN_VERSION-1+cuda10.1 \
+    libcudnn8-dev=$CUDNN_VERSION-1+cuda10.1 \
+    && apt-mark hold libcudnn8 && \
+    rm -rf /var/lib/apt/lists/*
+
+# install pyhton opengl - not necessary if no render
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python-opengl \
+           apt-utils \
+       build-essential \
+       curl \
+       xvfb \
+       ffmpeg \
+       xorg-dev \
+       libsdl2-dev \
+       swig \
+       cmake \
+       python-opengl \
+       libopencv-dev \
+       python3-opencv \
+       python3-pip \
+       zlib1g \
+       zlib1g-dev \
+       swig
+
+
+# Install pytorch
+RUN conda install pytorch torchvision torchaudio cudatoolkit=10.1 -c pytorch
+
+# Upgrade pip3
+RUN pip3 install --upgrade pip
+
+# Move the requirements file into the image
+COPY requirements.txt /tmp/
+
+# Install the python requirements on the image
+RUN pip3 install --trusted-host pypi.python.org -r /tmp/requirements.txt
+
+# Remove the requirements file - this is no longer needed
+RUN rm /tmp/requirements.txt
+
+# Set it as the working directory
+WORKDIR /home/my_rl2
+
+# Copy over the start-up script
+ADD scripts/startup_script.sh /usr/local/bin/startup_script.sh
+
+# Give permissions to execute
+RUN chmod 777 /usr/local/bin/startup_script.sh
+
+# Set the display when we run the container. This allows us to record without the user needing to type anything explicitly
+# This code snippet was taken from https://github.com/duckietown/gym-duckietown/issues/123
+ENTRYPOINT ["/usr/local/bin/startup_script.sh"]

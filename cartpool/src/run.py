@@ -1,4 +1,5 @@
 import gym
+from gym import wrappers
 from model import Agent
 import numpy as np
 from utils import plot_learning_curve
@@ -8,12 +9,15 @@ if __name__ == '__main__':
     agent = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=4, eps_end=0.01, input_dims=[8], lr=0.003)
     scores, eps_history = [] , []
     n_games = 500
-    
+    #env = wrappers.Monitor(env, directory=outdir, force=True)
+    #env.seed(0)
+
     for i in range(n_games):
         score = 0
         done = False
         observation = env.reset()
         while not done:
+            env.render()
             action = agent.choose_action(observation)
             observation_, reward, done, info = env.step(action)
             score += reward
@@ -29,9 +33,9 @@ if __name__ == '__main__':
                 'average score %.2f' % avg_score,
                 'epsilon %.2f' , agent.epsilon)
         
-        x = [i+1 for i in range(n_games)]
-        filename = 'lunar.png'
-        plot_learning_curve(x, scores, eps_history, filename)
+    x = [i+1 for i in range(n_games)]
+    filename = 'lunar.png'
+    plot_learning_curve(x, scores, eps_history, filename)
         
         
         

@@ -8,5 +8,5 @@ services:
         volumes:
             - ..:/home/my_rl2/
         command: sleep infinity
-            
-        
+        environment:
+            - NVIDIA_VISIBLE_DEVICES=all

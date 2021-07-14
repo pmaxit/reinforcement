@@ -1,0 +1,10 @@
+numpy
+gym
+box2d-py
+matplotlib
+seaborn
+pandas
+opencv-contrib-python
+pyvirtualdisplay
+atari_py
+pystan
