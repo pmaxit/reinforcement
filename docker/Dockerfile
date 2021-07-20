@@ -29,10 +29,10 @@ RUN pip3 install --upgrade pip
 COPY requirements.txt /tmp/
 
 # Install the python requirements on the image
-RUN pip3 install --trusted-host pypi.python.org -r /tmp/requirements.txt
+#RUN pip3 install --trusted-host pypi.python.org config --global http.sslVerify false -r /tmp/requirements.txt
 
 # Remove the requirements file - this is no longer needed
-RUN rm /tmp/requirements.txt
+#RUN rm /tmp/requirements.txt
 
 # Create a directory in which we can do our work
 RUN mkdir /home/my_rl/
